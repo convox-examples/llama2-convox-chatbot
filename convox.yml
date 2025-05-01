@@ -1,0 +1,38 @@
+# convox.yml
+environment:
+  - MODEL_PATH=/app/models/llama-2-7b-chat
+  - MAX_TOKENS=512
+  - MODEL_SERVER_URL=http://model-server:8000
+  - HF_TOKEN=  # Will be set using convox env set
+
+services:
+  model-server:
+    build: ./model-server
+    port: 8000
+    scale:
+      cpu: 1000      # 1 vCPU
+      memory: 8192   # 8GB RAM
+      count: 1
+      gpu: 1         # Request 1 GPU for the model server
+    volumes:
+      - /app/models:/app/models
+    nodeSelectorLabels:
+      convox.io/label: alternate-test-tag-2  # Schedule on our GPU node group
+    
+  api-service:
+    build: ./api-service
+    port: 8080
+    scale:
+      cpu: 256       # 0.25 vCPU
+      memory: 512    # 512MB RAM
+      count: 2       # 2 instances for better availability
+    environment:
+      - MODEL_SERVER_URL=http://model-server:8000
+      
+  frontend:
+    build: ./frontend
+    port: 3000
+    scale:
+      cpu: 256       # 0.25 vCPU
+      memory: 256    # 256MB RAM
+      count: 2       # 2 instances for better availability
